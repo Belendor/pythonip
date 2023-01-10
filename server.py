@@ -2,19 +2,25 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import cgi
 import os
 import asyncio
+import concurrent.futures
+import time
 
+def ping(host, ip):
+    print(f'start ping {host}')
 
-async def ping(host):
-    # Run the ping command
-    process = await asyncio.create_subprocess_exec(
-        "ping", "-c", "1", host, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-    # Wait for the ping command to complete
-    stdout, stderr = await process.communicate()
-    # Return the output of the ping command
-    return stdout
+    response = os.system("ping -c 1 " + host + " 1>/dev/null 2>/dev/null")
 
+    print(f'ending ping {host}')
+    return str(response) + ',' + host + ',' + ip
 
+def dig(host, ip ):
+    print(f'start dig {host}')
+
+    response = os.popen("dig " + host + " +short").read()
+
+    print(f'ending dig {host}')
+    return str(response) + ',' + host + ',' + ip
+ 
 class FormHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         # Send response status code
@@ -25,7 +31,7 @@ class FormHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         # Send form
-        self.wfile.write(b'''<form action="http://127.0.0.1:8080" method="POST" enctype="multipart/form-data">
+        self.wfile.write(b'''<form method="POST" enctype="multipart/form-data">
                             <label>Select a file:</label><br>
                             <input type="file" name="file"><br>
                             <input type="submit" value="Submit">
@@ -46,26 +52,54 @@ class FormHandler(BaseHTTPRequestHandler):
 
         switch = True
         array = []
+        ping_tasks = []
+        dig_tasks = []
 
-        for line in uploaded_file.splitlines():
-            if (switch):
-                first_line = line.decode()
-                switch = False
-                array.append('Name, Ping')
-                continue
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results_ping = []
+            results_dig = []
+
+            for line in uploaded_file.splitlines():
+                if (switch):
+                    switch = False
+                    array.append('Name, Ping, Dig')
+                    continue
+
+                ipName = line.decode().split(",")[1]
+                ip = line.decode().split(",")[0]
+
+                results_ping.append(executor.submit(ping, ipName, ip))
+                results_dig.append(executor.submit(dig, ipName, ip))
+
+
+            for f in concurrent.futures.as_completed(results_ping):
+
+                host = f.result().split(",")[1]
+                ip = f.result().split(",")[2]
+
+                if (int(f.result().split(",")[0]) == 0):
+                    ping_tasks.append(f'yes,{host},{ip}')
+                else:
+                    ping_tasks.append(f'no,{host},{ip}')
+
+            for f in concurrent.futures.as_completed(results_dig):
+
+                host = f.result().split(",")[1]
+
+                # print('>>>>>>>>>>>>>>>>>>>')
+                # print(f.result())
+
+                if (f.result().split(",")[0]):
+                    dig_tasks.append(f'yes,{host},{ip}')
+                else:
+                    dig_tasks.append(f'no,{host},{ip}')
             
-            ipName = line.decode().split(",")[1]
-            response = asyncio.run(ping(ipName))
-
-            # response = await asyncio.os.system("ping -c 1 " + line.decode().split(",")[1])
-            if (response):
-                array.append(f'{ipName}, Yes')
-            else:
-                array.append(f'{ipName}, No')
-            # print(response)
-
-            # Process the line
-            # print(line.decode())
+            for i in range(len(dig_tasks)):
+                for x in range(len(ping_tasks)):
+                    if dig_tasks[i].split(",")[1] == ping_tasks[x].split(",")[1]:
+                        array.append(
+                            f'{dig_tasks[i].split(",")[1]}, {ping_tasks[x].split(",")[0]}, {dig_tasks[i].split(",")[0]}' 
+                            )
 
         # Send response status code
         self.send_response(200)
@@ -74,11 +108,8 @@ class FormHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
 
-        kas = ", <br>".join(array)
-        print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
-        print(kas)
         # Send response
-        self.wfile.write(kas.encode("utf-8"))
+        self.wfile.write(", <br>".join(array).encode("utf-8"))
 
 
 httpd = HTTPServer(('0.0.0.0', 8080), FormHandler)
