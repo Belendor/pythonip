@@ -1,9 +1,7 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import cgi
 import os
-import asyncio
 import concurrent.futures
-import time
 
 def ping(host, ip):
     print(f'start ping {host}')
@@ -19,6 +17,14 @@ def dig(host, ip ):
     response = os.popen("dig " + host + " +short").read()
 
     print(f'ending dig {host}')
+    return str(response) + ',' + host + ',' + ip
+
+def nmap(host, ip ):
+    print(f'start nmap {host}')
+
+    response = os.popen("nmap " + ip  + " -Pn -p 22 | egrep -io 'open|closed|filtered'").read()
+
+    print(f'ending nmap {host}')
     return str(response) + ',' + host + ',' + ip
  
 class FormHandler(BaseHTTPRequestHandler):
@@ -52,17 +58,20 @@ class FormHandler(BaseHTTPRequestHandler):
 
         switch = True
         array = []
-        ping_tasks = []
-        dig_tasks = []
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
             results_ping = []
             results_dig = []
+            results_nmap = []
+
+            ping_tasks = []
+            dig_tasks = []
+            nmap_tasks = []
 
             for line in uploaded_file.splitlines():
                 if (switch):
                     switch = False
-                    array.append('Name, Ping, Dig')
+                    array.append('Name, Ping, Dig, Nmap')
                     continue
 
                 ipName = line.decode().split(",")[1]
@@ -70,7 +79,7 @@ class FormHandler(BaseHTTPRequestHandler):
 
                 results_ping.append(executor.submit(ping, ipName, ip))
                 results_dig.append(executor.submit(dig, ipName, ip))
-
+                results_nmap.append(executor.submit(nmap, ipName, ip))
 
             for f in concurrent.futures.as_completed(results_ping):
 
@@ -86,20 +95,27 @@ class FormHandler(BaseHTTPRequestHandler):
 
                 host = f.result().split(",")[1]
 
-                # print('>>>>>>>>>>>>>>>>>>>')
-                # print(f.result())
-
                 if (f.result().split(",")[0]):
                     dig_tasks.append(f'yes,{host},{ip}')
                 else:
                     dig_tasks.append(f'no,{host},{ip}')
             
+            for f in concurrent.futures.as_completed(results_nmap):
+
+                        host = f.result().split(",")[1]
+
+                        if (f.result().split(",")[0] == 'open'):
+                            nmap_tasks.append(f'yes,{host},{ip}')
+                        else:
+                            nmap_tasks.append(f'no,{host},{ip}')
+            
             for i in range(len(dig_tasks)):
                 for x in range(len(ping_tasks)):
-                    if dig_tasks[i].split(",")[1] == ping_tasks[x].split(",")[1]:
-                        array.append(
-                            f'{dig_tasks[i].split(",")[1]}, {ping_tasks[x].split(",")[0]}, {dig_tasks[i].split(",")[0]}' 
-                            )
+                    for y in range(len(nmap_tasks)):
+                        if dig_tasks[i].split(",")[1] == ping_tasks[x].split(",")[1] == nmap_tasks[y].split(",")[1]:
+                            array.append(
+                                f'{dig_tasks[i].split(",")[1]}, {ping_tasks[x].split(",")[0]}, {dig_tasks[i].split(",")[0]}, {nmap_tasks[y].split(",")[0]}' 
+                                )
 
         # Send response status code
         self.send_response(200)
