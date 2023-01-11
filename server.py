@@ -120,7 +120,12 @@ class FormHandler(BaseHTTPRequestHandler):
 
                 host = f.result().split(",")[1]
 
-                if (f.result().split(",")[0] == 'open'):
+                print("check>>>>>>>>>>>>>")
+                print(f.result().split(",")[0])
+                print('=')
+                print('open')
+
+                if (str(f.result().split(",")[0]).strip() == 'open'):
                     nmap_tasks.append(f'yes,{host},{ip}')
                 else:
                     nmap_tasks.append(f'no,{host},{ip}')
