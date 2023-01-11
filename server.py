@@ -58,7 +58,7 @@ class FormHandler(BaseHTTPRequestHandler):
                             <input type="file" name="file"><br>
                             <input type="submit" value="Submit">
                         </form><br>
-                        <a href="http://127.0.0.1:8080/download">Download File (not a Virus, trust me Bro)</a>''')
+                        <a href="http://127.0.0.1:8080/download">Download File (not a Virus)</a>''')
 
     def do_POST(self):
         # Parse the form data
