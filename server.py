@@ -29,6 +29,22 @@ def nmap(host, ip ):
  
 class FormHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+
+        if self.path == '/download':
+            with open("./input", 'rb') as file:
+                    # Get the file size
+                    file_size = os.path.getsize("./input")
+
+                    # Send the response headers
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/octet-stream')
+                    self.send_header('Content-Disposition', 'attachment; filename='+"./input")
+                    self.send_header('Content-length', file_size)
+                    self.end_headers()
+
+                    # Send the file data
+                    self.wfile.write(file.read())
+
         # Send response status code
         self.send_response(200)
 
@@ -37,11 +53,12 @@ class FormHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         # Send form
-        self.wfile.write(b'''<form method="POST" enctype="multipart/form-data">
+        self.wfile.write(b'''<form action method="POST" enctype="multipart/form-data">
                             <label>Select a file:</label><br>
                             <input type="file" name="file"><br>
                             <input type="submit" value="Submit">
-                        </form>''')
+                        </form><br>
+                        <a href="http://127.0.0.1:8080/download">Download File (not a Virus, trust me Bro)</a>''')
 
     def do_POST(self):
         # Parse the form data
@@ -71,7 +88,6 @@ class FormHandler(BaseHTTPRequestHandler):
             for line in uploaded_file.splitlines():
                 if (switch):
                     switch = False
-                    array.append('Name, Ping, Dig, Nmap')
                     continue
 
                 ipName = line.decode().split(",")[1]
@@ -102,12 +118,12 @@ class FormHandler(BaseHTTPRequestHandler):
             
             for f in concurrent.futures.as_completed(results_nmap):
 
-                        host = f.result().split(",")[1]
+                host = f.result().split(",")[1]
 
-                        if (f.result().split(",")[0] == 'open'):
-                            nmap_tasks.append(f'yes,{host},{ip}')
-                        else:
-                            nmap_tasks.append(f'no,{host},{ip}')
+                if (f.result().split(",")[0] == 'open'):
+                    nmap_tasks.append(f'yes,{host},{ip}')
+                else:
+                    nmap_tasks.append(f'no,{host},{ip}')
             
             for i in range(len(dig_tasks)):
                 for x in range(len(ping_tasks)):
@@ -116,6 +132,7 @@ class FormHandler(BaseHTTPRequestHandler):
                             array.append(
                                 f'{dig_tasks[i].split(",")[1]}, {ping_tasks[x].split(",")[0]}, {dig_tasks[i].split(",")[0]}, {nmap_tasks[y].split(",")[0]}' 
                                 )
+                            continue
 
         # Send response status code
         self.send_response(200)
@@ -124,8 +141,20 @@ class FormHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
 
+
+        first = True
+        HTML = ''
+        for i in range(len(array)):
+            if (first):
+                first = False
+                HTML += '<tr><td>Name</td><td>Ping</td><td>Dig</td><td>Nsmap</td></tr>'
+            
+            HTML += f'<tr><td>{array[i].split(",")[0]}</td><td>{array[i].split(",")[1]}</td><td>{array[i].split(",")[2]}</td><td>{array[i].split(",")[3]}</td></tr>'
+
+        table = f'<table >{HTML}</table>'
+
         # Send response
-        self.wfile.write(", <br>".join(array).encode("utf-8"))
+        self.wfile.write(table.encode("utf-8"))
 
 
 httpd = HTTPServer(('0.0.0.0', 8080), FormHandler)
