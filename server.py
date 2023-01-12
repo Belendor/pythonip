@@ -31,7 +31,6 @@ class FormHandler(BaseHTTPRequestHandler):
     def do_GET(self):
 
         if self.path == '/download':
-            print('download hit')
             with open("./input", 'rb') as file:
                     # Get the file size
                     file_size = os.path.getsize("./input")
@@ -48,7 +47,6 @@ class FormHandler(BaseHTTPRequestHandler):
                     file.close()
                     self.connection.close()
         else:
-            print('Get hit')
             # Send response status code
             self.send_response(200)
 
@@ -65,7 +63,6 @@ class FormHandler(BaseHTTPRequestHandler):
                             <a href="/download">Download File (not a Virus)</a>''')
 
     def do_POST(self):
-        print('POST hit')
         # Parse the form data
         form = cgi.FieldStorage(
             fp=self.rfile,
@@ -149,14 +146,15 @@ class FormHandler(BaseHTTPRequestHandler):
 
         first = True
         HTML = ''
+        
         for i in range(len(array)):
             if (first):
                 first = False
                 HTML += '<tr><td>Name</td><td>Ping</td><td>Dig</td><td>Nsmap</td></tr>'
-            
+    
             HTML += f'<tr><td>{array[i].split(",")[0]}</td><td>{array[i].split(",")[1]}</td><td>{array[i].split(",")[2]}</td><td>{array[i].split(",")[3]}</td></tr>'
 
-        table = f'<table >{HTML}</table>'
+        table = f'<table>{HTML}</table>'
 
         # Send response
         self.wfile.write(table.encode("utf-8"))
