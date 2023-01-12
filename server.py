@@ -31,6 +31,7 @@ class FormHandler(BaseHTTPRequestHandler):
     def do_GET(self):
 
         if self.path == '/download':
+            print('download hit')
             with open("./input", 'rb') as file:
                     # Get the file size
                     file_size = os.path.getsize("./input")
@@ -44,23 +45,27 @@ class FormHandler(BaseHTTPRequestHandler):
 
                     # Send the file data
                     self.wfile.write(file.read())
+                    file.close()
+                    self.connection.close()
+        else:
+            print('Get hit')
+            # Send response status code
+            self.send_response(200)
 
-        # Send response status code
-        self.send_response(200)
+            # Send headers
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
 
-        # Send headers
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-
-        # Send form
-        self.wfile.write(b'''<form action method="POST" enctype="multipart/form-data">
-                            <label>Select a file:</label><br>
-                            <input type="file" name="file"><br>
-                            <input type="submit" value="Submit">
-                        </form><br>
-                        <a href="http://127.0.0.1:8080/download">Download File (not a Virus)</a>''')
+            # Send form
+            self.wfile.write(b'''<form action method="POST" enctype="multipart/form-data">
+                                <label>Select a file:</label><br>
+                                <input type="file" name="file"><br>
+                                <input type="submit" value="Submit">
+                            </form><br>
+                            <a href="/download">Download File (not a Virus)</a>''')
 
     def do_POST(self):
+        print('POST hit')
         # Parse the form data
         form = cgi.FieldStorage(
             fp=self.rfile,
@@ -119,11 +124,6 @@ class FormHandler(BaseHTTPRequestHandler):
             for f in concurrent.futures.as_completed(results_nmap):
 
                 host = f.result().split(",")[1]
-
-                print("check>>>>>>>>>>>>>")
-                print(f.result().split(",")[0])
-                print('=')
-                print('open')
 
                 if (str(f.result().split(",")[0]).strip() == 'open'):
                     nmap_tasks.append(f'yes,{host},{ip}')
