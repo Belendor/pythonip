@@ -1,8 +1,8 @@
 # Nginx REverse Proxy
 
-```/etc/nginx/sites-available/defaul`
+`/etc/nginx/sites-available/defaul`
 
-`server {
+```server {
     listen 80;
     listen [::]:80;
     server_name _;
