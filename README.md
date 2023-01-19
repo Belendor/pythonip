@@ -1,4 +1,4 @@
-# Nginx REverse Proxy
+# Nginx Reverse Proxy
 
 `/etc/nginx/sites-available/defaul`
 
