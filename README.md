@@ -2,7 +2,8 @@
 
 `/etc/nginx/sites-available/defaul`
 
-```server {
+```
+server {
     listen 80;
     listen [::]:80;
     server_name _;
@@ -21,4 +22,4 @@
 #    ssl_protocols TLSv1.2;
 #    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
 #    ssl_prefer_server_ciphers on;
-}```
+}
